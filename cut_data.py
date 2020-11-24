@@ -15,14 +15,10 @@ def in_bounds(coord):
   return True
 
 def cut_coordinates(flight):
-  # Why flight.copy and not just flight
   flight_copy = flight.copy()
-  # flight plot (coordinates) = Array | take coord (Aufforderung) for coord (elemnt) in flight (flight object) if in_bounds returns true
   flight_copy['track']['plot'] = [coord for coord in flight['track']['plot'] if in_bounds(coord)]
-  return flight_copy # returns it to be saved in data_cut
+  return flight_copy 
 
-# data_cut = do (cut_coordinates(flight) for flight (each flight object) in data (json file))
-# iterates through data (each flight) and gives it to cut_coordinates
 data_cut = [cut_coordinates(flight) for flight in data]
 
 with open('data_cut.json', 'w') as f:
