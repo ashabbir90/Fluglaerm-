@@ -1,0 +1,53 @@
+<html>
+<head>
+    <title>A Leaflet map!</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"
+          integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"
+            integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
+            crossorigin=""></script>
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="leaflet.heat.js"></script>
+    <style>
+        #map {
+            height: 100%
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+
+    // initialize the map
+    var map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
+
+    // load a tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 17,
+            minZoom: 9
+        }).addTo(map);
+
+    map.setZoom(12);
+
+    $.getJSON("data_cut.json", function (data) {
+        var locations = [];
+        for (var i = 0; i < data.length; i++) {
+            for (var j = data[i].track.plot.length - 1; j >= 0; j--) {
+                datapoint = data[i].track.plot[j];
+                var coord = [datapoint.y, datapoint.x, 1]; // the third entry determines the intensity, like "1", "0.2"...
+                locations.push(coord);
+            }
+        }
+
+        var heat = L.heatLayer(locations, {radius: 10});
+        map.addLayer(heat);
+    });
+
+</script>
+</body>
+</html>
