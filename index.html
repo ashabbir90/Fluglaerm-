@@ -49,7 +49,10 @@
                 datapoint = data[i].track.plot[j];
                 var coord = [datapoint.y, datapoint.x];
 
+                // Subtract by 328 because it seems like they always measure with sea level values because on the map, even if the plane landed, it still says about 100 meter and
+                // Leipzig is roughly 100m above sea level so I just took that as an average since I dont think we can take the real height of every coord in consideration
                 var height = (Math.round(10000*((datapoint.z - 328) / 3.281))/10000); // convert feet to meter to actually have a useful unit
+
                 if (mode === 'departure') {
                 	if (height < 500) {
                 	    coord.push(0.82);
