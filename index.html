@@ -37,9 +37,42 @@
     $.getJSON("data_cut.json", function (data) {
         var locations = [];
         for (var i = 0; i < data.length; i++) {
+
+        	var mode = '';
+        	if (data[i].From_Name === 'LEIPZIG') {
+        		mode = 'departure';
+        	} else {
+        		mode = 'arrival';
+        	}
+
             for (var j = data[i].track.plot.length - 1; j >= 0; j--) {
                 datapoint = data[i].track.plot[j];
-                var coord = [datapoint.y, datapoint.x, 1]; // the third entry determines the intensity, like "1", "0.2"...
+                var coord = [datapoint.y, datapoint.x];
+
+                var height = (Math.round(10000*((datapoint.z - 328) / 3.281))/10000); // convert feet to meter to actually have a useful unit
+                if (mode === 'departure') {
+                	if (height < 500) {
+                	    coord.push(0.82);
+                    } else if (height < 1000) {
+                	    coord.push(0.74);
+                    } else if (height < 1500) {
+                	    coord.push(0.69);
+                    } else {
+                	    coord.push(0);
+                    }
+                } else {
+                    if (height < 500) {
+                        coord.push(0.74);
+                    } else if (height < 1000) {
+                        coord.push(0.66);
+                    } else if (height < 1500) {
+                        coord.push(0.60);
+                    } else {
+                        coord.push(0);
+                    }
+                }
+
+                 // the third entry determines the intensity, like "1", "0.2"...
                 locations.push(coord);
             }
         }
