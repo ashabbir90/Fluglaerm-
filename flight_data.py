@@ -12,7 +12,7 @@ BASE_PARAMS = {
 BASIC_AUTH = 'Basic R0VSTUFOWW46ZmFub21vcw==' # aus den requests von der Webseite ablesen (Inhalt des 'Authorization' headers)
 
 FROM_DATE = datetime(2020, 11, 30, 00, 00)
-TO_DATE = datetime(2020, 12, 6, 00, 00)
+TO_DATE = datetime(2020, 12, 6, 23, 59)
 
 def fetch_data(from_n=1, fastcount=False):
   params = {
