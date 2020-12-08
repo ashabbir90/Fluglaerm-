@@ -13,16 +13,28 @@
         #map {
             height: 100%
         }
+
+        .hoverCursor {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
+<buton id='whole_week' class='hoverCursor'>Ganze Woche</buton>
+|
+<buton id='weekdays_day' class='hoverCursor'>Wochentags (Tag)</buton>
+|
+<buton id='weekdays_night' class='hoverCursor'>Wochentags (Nacht)</buton>
+|
+<buton id='weekend' class='hoverCursor'>Wocheende</buton>
 <div id="map"></div>
 
 <script>
 
     // initialize the map
     var map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
+    var data;
 
     // load a tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -34,9 +46,9 @@
 
     map.setZoom(12);
 
-    $.getJSON("flight_data.json", function (data) {
+    $.getJSON("flight_data.json", function (flight_data) {
 
-        data = data.map((item) => ({
+        flight_data = flight_data.map((item) => ({
             ...item,
             STA: new Date(item.STA), // some Value -1 == 1969,....
             STD: new Date(item.STD), // some Value -1 == 1969,....
@@ -46,19 +58,39 @@
 
         }));
 
+        data = flight_data;
+    });
+
+    function generateLocations(type) {
+        let filtered_data = data;
+
+        if (type === 'weekdays_day') {
+            filtered_data = data.filter(x => {
+                return ((x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4) && (x.Time.getHours() > 7 && x.Time.getHours() < 22));
+            });
+        } else if (type === 'weekdays_night') {
+            filtered_data = data.filter(x => {
+                return ((x.Time.getDay() === 1 || x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4 || x.Time.getDay() === 5) &&
+                    (x.Time.getHours() > 20 || x.Time.getHours() < 9));
+            });
+        } else if (type === 'weekend') {
+            filtered_data = data.filter(x => {
+                return (x.Time.getDay() === 6 || x.Time.getDay() === 0);
+            });
+        }
 
         var locations = [];
-        for (var i = 0; i < data.length; i++) {
+        for (var i = 0; i < filtered_data.length; i++) {
 
             var mode = '';
-            if (data[i].From_Name === 'LEIPZIG') {
+            if (filtered_data[i].From_Name === 'LEIPZIG') {
                 mode = 'departure';
             } else {
                 mode = 'arrival';
             }
 
-            for (var j = data[i].track.plot.length - 1; j >= 0; j--) {
-                datapoint = data[i].track.plot[j];
+            for (var j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
+                datapoint = filtered_data[i].track.plot[j];
                 var coord = [datapoint.y, datapoint.x];
 
                 // Subtract by 328 because it seems like they always measure with sea level values because on the map, even if the plane landed, it still says about 100 meter and
@@ -96,10 +128,25 @@
             }
         }
 
+        // if locations are already existing, they should be removed so the new ones wont be applied on top of it
         var heat = L.heatLayer(locations, {radius: 10});
         map.addLayer(heat);
-    });
+    }
 
+    $(document).ready(function () {
+        $("#whole_week").click(function () {
+            generateLocations("whole_week");
+        });
+        $("#weekdays_day").click(function () {
+            generateLocations("weekdays_day");
+        });
+        $("#weekdays_night").click(function () {
+            generateLocations("weekdays_night");
+        });
+        $("#weekend").click(function () {
+            generateLocations("weekend");
+        });
+    });
 </script>
 </body>
 </html>
