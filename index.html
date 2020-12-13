@@ -14,27 +14,31 @@
             height: 100%
         }
 
-        .hoverCursor {
+        .timeframe {
             cursor: pointer;
+        }
+        .active {
+            background-color: lightcoral;
         }
     </style>
 </head>
 <body>
 
-<buton id='whole_week' class='hoverCursor'>Ganze Woche</buton>
+<button id="whole_week" class="timeframe">Ganze Woche</button>
 |
-<buton id='weekdays_day' class='hoverCursor'>Wochentags (Tag)</buton>
+<button id="weekdays_day" class="timeframe">Wochentags (Tag)</button>
 |
-<buton id='weekdays_night' class='hoverCursor'>Wochentags (Nacht)</buton>
+<button id="weekdays_night" class="timeframe">Wochentags (Nacht)</button>
 |
-<buton id='weekend' class='hoverCursor'>Wocheende</buton>
+<button id="weekend" class="timeframe">Wochenende</button>
 <div id="map"></div>
 
 <script>
 
     // initialize the map
-    var map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
-    var data;
+    const map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
+    let heat;
+    let data;
 
     // load a tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -48,7 +52,7 @@
 
     $.getJSON("flight_data.json", function (flight_data) {
 
-        flight_data = flight_data.map((item) => ({
+        data = flight_data.map((item) => ({
             ...item,
             STA: new Date(item.STA), // some Value -1 == 1969,....
             STD: new Date(item.STD), // some Value -1 == 1969,....
@@ -57,9 +61,15 @@
             ATD: new Date(item.ATD)
 
         }));
-
-        data = flight_data;
     });
+
+    function setActiveTimeframe(id) {
+        const active = document.querySelector('.timeframe.active');
+        if (active) {
+            active.classList.remove('active');
+        }
+        document.getElementById(id).classList.add('active');
+    }
 
     function generateLocations(type) {
         let filtered_data = data;
@@ -79,23 +89,18 @@
             });
         }
 
-        var locations = [];
-        for (var i = 0; i < filtered_data.length; i++) {
+        const locations = [];
+        for (let i = 0; i < filtered_data.length; i++) {
 
-            var mode = '';
-            if (filtered_data[i].From_Name === 'LEIPZIG') {
-                mode = 'departure';
-            } else {
-                mode = 'arrival';
-            }
+            const mode = filtered_data[i].From_Name === 'LEIPZIG' ? 'depature' : 'arrival';
 
-            for (var j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
+            for (let j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
                 datapoint = filtered_data[i].track.plot[j];
-                var coord = [datapoint.y, datapoint.x];
+                const coord = [datapoint.y, datapoint.x];
 
                 // Subtract by 328 because it seems like they always measure with sea level values because on the map, even if the plane landed, it still says about 100 meter and
                 // Leipzig is roughly 100m above sea level so I just took that as an average since I dont think we can take the real height of every coord in consideration
-                var height = (Math.round(10000 * ((datapoint.z - 328) / 3.281)) / 10000); // convert feet to meter to actually have a useful unit
+                const height = Math.round(10000 * ((datapoint.z - 328) / 3.281)) / 10000; // convert feet to meter to actually have a useful unit
 
                 if (mode === 'departure') {
                     if (height <= 500) {
@@ -129,23 +134,27 @@
         }
 
         // if locations are already existing, they should be removed so the new ones wont be applied on top of it
-        var heat = L.heatLayer(locations, {radius: 10});
-        map.addLayer(heat);
+        if (!heat) {
+            heat = L.heatLayer(locations, {radius: 10})
+                .addTo(map);
+        } else {
+            heat.setLatLngs(locations);
+        }
     }
 
     $(document).ready(function () {
-        $("#whole_week").click(function () {
-            generateLocations("whole_week");
-        });
-        $("#weekdays_day").click(function () {
-            generateLocations("weekdays_day");
-        });
-        $("#weekdays_night").click(function () {
-            generateLocations("weekdays_night");
-        });
-        $("#weekend").click(function () {
-            generateLocations("weekend");
-        });
+        const timeframes = [
+            'whole_week',
+            'weekdays_day',
+            'weekdays_night',
+            'weekend'
+        ];
+        timeframes.forEach(timeframe => {
+            document.getElementById(timeframe).addEventListener('click', () => {
+                generateLocations(timeframe);
+                setActiveTimeframe(timeframe);
+            })
+        })
     });
 </script>
 </body>
