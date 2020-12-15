@@ -2,11 +2,11 @@
 <head>
     <title>A Leaflet map!</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"
-          integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
-          crossorigin=""/>
+    integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
+    crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"
-            integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
-            crossorigin=""></script>
+    integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
+    crossorigin=""></script>
     <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="leaflet.heat.js"></script>
     <style>
@@ -24,16 +24,14 @@
 </head>
 <body>
 
-<button id="whole_week" class="timeframe">Ganze Woche</button>
-|
-<button id="weekdays_day" class="timeframe">Wochentags (Tag)</button>
-|
-<button id="weekdays_night" class="timeframe">Wochentags (Nacht)</button>
-|
-<button id="weekend" class="timeframe">Wochenende</button>
-<div id="map"></div>
+    <button id="whole_week" class="timeframe">Ganze Woche</button>
+    <button id="weekdays_day" class="timeframe">Wochentags (Tag)</button>
+    <button id="weekdays_night" class="timeframe">Wochentags (Nacht)</button>
+    <button id="weekend" class="timeframe">Wochenende</button>
+    <button id="raw_data" class="timeframe">Rohdaten</button>
+    <div id="map"></div>
 
-<script>
+    <script>
 
     // initialize the map
     const map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
@@ -42,11 +40,11 @@
 
     // load a tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 17,
-            minZoom: 9
-        }).addTo(map);
+    {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 17,
+        minZoom: 9
+    }).addTo(map);
 
     map.setZoom(12);
 
@@ -74,59 +72,63 @@
     function generateLocations(type) {
         let filtered_data = data;
 
-        if (type === 'weekdays_day') {
-            filtered_data = data.filter(x => {
-                return ((x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4) && (x.Time.getHours() > 7 && x.Time.getHours() < 22));
-            });
-        } else if (type === 'weekdays_night') {
-            filtered_data = data.filter(x => {
-                return ((x.Time.getDay() === 1 || x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4 || x.Time.getDay() === 5) &&
-                    (x.Time.getHours() > 20 || x.Time.getHours() < 9));
-            });
-        } else if (type === 'weekend') {
-            filtered_data = data.filter(x => {
-                return (x.Time.getDay() === 6 || x.Time.getDay() === 0);
-            });
-        }
+        if (type !== 'raw_data') {
+            if (type === 'weekdays_day') {
+                filtered_data = data.filter(x => {
+                    return ((x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4) && (x.Time.getHours() > 7 && x.Time.getHours() < 22));
+                });
+            } else if (type === 'weekdays_night') {
+                filtered_data = data.filter(x => {
+                    return ((x.Time.getDay() === 1 || x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4 || x.Time.getDay() === 5) &&
+                        (x.Time.getHours() > 20 || x.Time.getHours() < 9));
+                });
+            } else if (type === 'weekend') {
+                filtered_data = data.filter(x => {
+                    return (x.Time.getDay() === 6 || x.Time.getDay() === 0);
+                });
+            }}
 
-        const locations = [];
-        for (let i = 0; i < filtered_data.length; i++) {
+            const locations = [];
+            for (let i = 0; i < filtered_data.length; i++) {
 
-            const mode = filtered_data[i].From_Name === 'LEIPZIG' ? 'depature' : 'arrival';
+                const mode = filtered_data[i].From_Name === 'LEIPZIG' ? 'depature' : 'arrival';
 
-            for (let j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
-                datapoint = filtered_data[i].track.plot[j];
-                const coord = [datapoint.y, datapoint.x];
+                for (let j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
+                    datapoint = filtered_data[i].track.plot[j];
+                    const coord = [datapoint.y, datapoint.x];
 
                 // Subtract by 328 because it seems like they always measure with sea level values because on the map, even if the plane landed, it still says about 100 meter and
                 // Leipzig is roughly 100m above sea level so I just took that as an average since I dont think we can take the real height of every coord in consideration
                 const height = Math.round(10000 * ((datapoint.z - 328) / 3.281)) / 10000; // convert feet to meter to actually have a useful unit
 
-                if (mode === 'departure') {
-                    if (height <= 500) {
-                        coord.push(0.82);
-                    } else if (height <= 1000) {
-                        coord.push(0.74);
-                    } else if (height <= 1500) {
-                        coord.push(0.69);
-                    } else if (height <= 2000) {
-                        coord.push(0.65);
-                    } else if (height <= 2500) {
-                        coord.push(0.62);
+                if (type !== 'raw_data') {
+                    if (mode === 'departure') {
+                        if (height <= 500) {
+                            coord.push(0.82);
+                        } else if (height <= 1000) {
+                            coord.push(0.74);
+                        } else if (height <= 1500) {
+                            coord.push(0.69);
+                        } else if (height <= 2000) {
+                            coord.push(0.65);
+                        } else if (height <= 2500) {
+                            coord.push(0.62);
+                        } else {
+                            coord.push(0);
+                        }
                     } else {
-                        coord.push(0);
+                        if (height <= 500) {
+                            coord.push(0.74);
+                        } else if (height <= 1000) {
+                            coord.push(0.66);
+                        } else if (height <= 1500) {
+                            coord.push(0.60);
+                        } else {
+                            coord.push(0);
+                        }
+                    }} else {
+                        coord.push(1);
                     }
-                } else {
-                    if (height <= 500) {
-                        coord.push(0.74);
-                    } else if (height <= 1000) {
-                        coord.push(0.66);
-                    } else if (height <= 1500) {
-                        coord.push(0.60);
-                    } else {
-                        coord.push(0);
-                    }
-                }
 
                 // the third entry determines the intensity, like "1", "0.2"...
                 locations.push(coord);
@@ -136,7 +138,7 @@
         // if locations are already existing, they should be removed so the new ones wont be applied on top of it
         if (!heat) {
             heat = L.heatLayer(locations, {radius: 10})
-                .addTo(map);
+            .addTo(map);
         } else {
             heat.setLatLngs(locations);
         }
@@ -144,10 +146,11 @@
 
     $(document).ready(function () {
         const timeframes = [
-            'whole_week',
-            'weekdays_day',
-            'weekdays_night',
-            'weekend'
+        'whole_week',
+        'weekdays_day',
+        'weekdays_night',
+        'weekend',
+        'raw_data'
         ];
         timeframes.forEach(timeframe => {
             document.getElementById(timeframe).addEventListener('click', () => {
