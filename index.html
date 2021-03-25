@@ -1,5 +1,8 @@
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fluglärmkarte Leipzig</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"
     integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
@@ -13,153 +16,149 @@
         #map {
             height: 100%
         }
-
-        .timeframe {
-            cursor: pointer;
+        #flight-data-notice {
+            position: absolute;
+            bottom: .5rem;
+            left: .5rem;
+            padding-right: .5rem;
+            padding-top: .5rem;
+            z-index: 1000;
+            background: white;
         }
-        .active {
-            background-color: lightcoral;
+        .legend {
+            padding: .25rem;
+            background: rgba(255, 255, 255, 0.8);
+            line-height: 1.5rem;
+            color: #333;
+        }
+        .legend h4 {
+            text-align: center;
+            font-size: 1rem;
+            margin: .5rem;
+        }
+        .legend span {
+            position: relative;
+            bottom: 3px;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin: 0 8px 0 0;
+            opacity: 0.7;
         }
     </style>
 </head>
 <body>
 
-    <button id="whole_week" class="timeframe">Ganze Woche</button>
-    <button id="weekdays_day" class="timeframe">Wochentags (Tag)</button>
-    <button id="weekdays_night" class="timeframe">Wochentags (Nacht)</button>
-    <button id="weekend" class="timeframe">Wochenende</button>
-    <button id="raw_data" class="timeframe">Rohdaten</button>
-    <div style="display: inline; float: right">Flugdaten von 30.11.2020 00:00 Uhr bis 6.12.2020 23:59 Uhr</div>
+    <div id="flight-data-notice">Flugdaten von 30.11.2020 00:00 Uhr bis 6.12.2020 23:59 Uhr</div>
     <div id="map"></div>
 
     <script>
 
-    // initialize the map
-    const map = L.map('map').setView([51.340833, 12.375122], 13); //51.340833, 12.375122
-    let heat;
-    let data;
+    const noiseTimeframes = [
+        {
+            label: 'Ganze Woche',
+            geojsonProperty: 'allweek_mean',
+        },
+        {
+            label: 'Wochentags tagsüber',
+            geojsonProperty: 'day_mean',
+        },
+        {
+            label: 'Wochentags nachts',
+            geojsonProperty: 'night_mean',
+        },
+        {
+            label: 'Wochenende ganztagig',
+            geojsonProperty: 'weekend_mean',
+        },
+    ];
+    
+    const noiseColors = {
+        60: '#2c7bb6',
+        65: '#6baad0',
+        70: '#abd9e9',
+        75: '#d5ecd4',
+        80: '#ffffbf',
+        85: '#fed790',
+        90: '#fdae61',
+        95: '#ea633e',
+        100: '#d7191c',
+    };
 
-    // load a tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 17,
-        minZoom: 9
-    }).addTo(map);
+    const getNoiseColor = (noise) => {
+        let key = Math.ceil(noise / 5) * 5;
+        key = Math.min(Math.max(60, key), 100);
+        return noiseColors[key];
+    };
 
-    map.setZoom(12);
-
-    $.getJSON("flight_data.json", function (flight_data) {
-
-        data = flight_data.map((item) => ({
-            ...item,
-            STA: new Date(item.STA), // some Value -1 == 1969,....
-            STD: new Date(item.STD), // some Value -1 == 1969,....
-            Time: new Date(item.Time),
-            ATA: new Date(item.ATA),
-            ATD: new Date(item.ATD)
-
-        }));
-    });
-
-    function setActiveTimeframe(id) {
-        const active = document.querySelector('.timeframe.active');
-        if (active) {
-            active.classList.remove('active');
-        }
-        document.getElementById(id).classList.add('active');
+    const styleFn = (timeframe) => {
+        return (feature) => {
+            const color = getNoiseColor(feature.properties[timeframe])
+            return {
+                color,
+                weight: 1,
+                opacity: 0.1,
+                fillColor: color,
+                fillOpacity: 0.7,
+            };
+        };
     }
 
-    function generateLocations(type) {
-        let filtered_data = data;
+    const initMap = (data, flightLines) => {
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 17,
+            minZoom: 9
+        });
 
-        if (type !== 'raw_data') {
-            if (type === 'weekdays_day') {
-                filtered_data = data.filter(x => {
-                    return ((x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4) && (x.Time.getHours() > 7 && x.Time.getHours() < 22));
-                });
-            } else if (type === 'weekdays_night') {
-                filtered_data = data.filter(x => {
-                    return ((x.Time.getDay() === 1 || x.Time.getDay() === 2 || x.Time.getDay() === 3 || x.Time.getDay() === 4 || x.Time.getDay() === 5) &&
-                        (x.Time.getHours() > 20 || x.Time.getHours() < 9));
-                });
-            } else if (type === 'weekend') {
-                filtered_data = data.filter(x => {
-                    return (x.Time.getDay() === 6 || x.Time.getDay() === 0);
-                });
-            }}
+        const layers = {};
+        noiseTimeframes
+            .forEach(({ label, geojsonProperty }) => {
+                const dataLayer = L.geoJson(data, { style: styleFn(geojsonProperty) });
+                layers[label] = L.layerGroup([osmLayer, dataLayer]);
+            });
 
-            const locations = [];
-            for (let i = 0; i < filtered_data.length; i++) {
+        const flightLinesLayer = L.geoJson(flightLines);
+        layers['Fluglinien (Rohdaten)'] = L.layerGroup([osmLayer, flightLinesLayer]);
 
-                const mode = filtered_data[i].From_Name === 'LEIPZIG' ? 'depature' : 'arrival';
+        const bounds = new L.LatLngBounds(
+            new L.LatLng(51.158857, 11.842693),
+            new L.LatLng(51.558857, 12.742693),
+        );
 
-                for (let j = filtered_data[i].track.plot.length - 1; j >= 0; j--) {
-                    datapoint = filtered_data[i].track.plot[j];
-                    const coord = [datapoint.y, datapoint.x];
-
-                // Subtract by 328 because it seems like they always measure with sea level values because on the map, even if the plane landed, it still says about 100 meter and
-                // Leipzig is roughly 100m above sea level so I just took that as an average since I dont think we can take the real height of every coord in consideration
-                const height = Math.round(10000 * ((datapoint.z - 328) / 3.281)) / 10000; // convert feet to meter to actually have a useful unit
-
-                if (type !== 'raw_data') {
-                    if (mode === 'departure') {
-                        if (height <= 500) {
-                            coord.push(0.82);
-                        } else if (height <= 1000) {
-                            coord.push(0.74);
-                        } else if (height <= 1500) {
-                            coord.push(0.69);
-                        } else if (height <= 2000) {
-                            coord.push(0.65);
-                        } else if (height <= 2500) {
-                            coord.push(0.62);
-                        } else {
-                            coord.push(0);
-                        }
-                    } else {
-                        if (height <= 500) {
-                            coord.push(0.74);
-                        } else if (height <= 1000) {
-                            coord.push(0.66);
-                        } else if (height <= 1500) {
-                            coord.push(0.60);
-                        } else {
-                            coord.push(0);
-                        }
-                    }} else {
-                        coord.push(1);
-                    }
-
-                // the third entry determines the intensity, like "1", "0.2"...
-                locations.push(coord);
-            }
-        }
-
-        // if locations are already existing, they should be removed so the new ones wont be applied on top of it
-        if (!heat) {
-            heat = L.heatLayer(locations, {radius: 10})
-            .addTo(map);
-        } else {
-            heat.setLatLngs(locations);
-        }
-    }
-
-    $(document).ready(function () {
-        const timeframes = [
-        'whole_week',
-        'weekdays_day',
-        'weekdays_night',
-        'weekend',
-        'raw_data'
-        ];
-        timeframes.forEach(timeframe => {
-            document.getElementById(timeframe).addEventListener('click', () => {
-                generateLocations(timeframe);
-                setActiveTimeframe(timeframe);
+        const map = L
+            .map('map', {
+                zoom: 12,
+                layers: Object.values(layers)[0],
+                maxBounds: bounds,
+                maxBoundsViscosity: 1,
             })
-        })
+            .setView([51.340833, 12.375122], 13);
+
+        L.control.layers(layers).addTo(map);
+
+        const legend = L.control({ position: 'topright' });
+        legend.onAdd = () => {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML += '<h4>Lärmpegel</h4>';
+            Object
+                .entries(noiseColors)
+                .forEach(([noise, color]) => {
+                    div.innerHTML += `<i style="background: ${color}"></i><span>${noise - 5}-${noise} db</span><br>`;
+                });
+            return div;
+        };
+        legend.addTo(map);
+    }
+
+    $.getJSON('data/geojson_gitter/gitter100.geojson', (data) => {
+        $.getJSON('data/flight_lines.geojson', (flightLines) => {
+            initMap(data, flightLines);
+        });
     });
+
 </script>
 </body>
 </html>

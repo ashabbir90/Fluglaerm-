@@ -1,0 +1,8 @@
+.vscode
+.DS_Store
+geojson
+geojson_nolocal
+geojson_nolocal_2
+geojson_raster
+mitQGIS
+qgis-raster.html
