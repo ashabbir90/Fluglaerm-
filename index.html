@@ -137,7 +137,9 @@
             })
             .setView([51.340833, 12.375122], 13);
 
-        L.control.layers(layers).addTo(map);
+        L.control
+            .layers(layers, {}, {collapsed: false})
+            .addTo(map);
 
         const legend = L.control({ position: 'topright' });
         legend.onAdd = () => {
