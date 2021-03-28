@@ -121,7 +121,7 @@
             });
 
         const flightLinesLayer = L.geoJson(flightLines);
-        layers['Fluglinien (Rohdaten)'] = L.layerGroup([osmLayer, flightLinesLayer]);
+        layers['Fluglinien (Ganze Woche)'] = L.layerGroup([osmLayer, flightLinesLayer]);
 
         const bounds = new L.LatLngBounds(
             new L.LatLng(51.158857, 11.842693),
@@ -130,12 +130,13 @@
 
         const map = L
             .map('map', {
-                zoom: 12,
+                zoom: 10,
+                minZoom: 10,
                 layers: Object.values(layers)[0],
                 maxBounds: bounds,
                 maxBoundsViscosity: 1,
             })
-            .setView([51.340833, 12.375122], 13);
+            .setView([51.340833, 12.375122]);
 
         L.control
             .layers(layers, {}, {collapsed: false})
