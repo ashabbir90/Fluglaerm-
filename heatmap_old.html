@@ -52,7 +52,7 @@
 
     map.setZoom(12);
 
-    $.getJSON("flight_data.json", function (flight_data) {
+    $.getJSON("data/flight_data.json", function (flight_data) {
 
         data = flight_data.map((item) => ({
             ...item,
